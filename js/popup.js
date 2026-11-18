@@ -60,6 +60,9 @@ async function init() {
   $("#btnSettings").click(onSettings);
   $("#btnForward").click(onForward);
   $("#btnRewind").click(onRewind);
+  document.getElementById("playback-rate").addEventListener("change", onPlaybackRateChange)
+  document.getElementById("playback-rate").addEventListener("input", () => {playbackRateReconciliation = null})
+  document.querySelector('label[for="playback-rate"]').textContent = brapi.i18n.getMessage("options_rate_label")
   $("#decrease-font-size").click(changeFontSize.bind(null, -1));
   $("#increase-font-size").click(changeFontSize.bind(null, +1));
   $("#decrease-window-size").click(changeWindowSize.bind(null, -1));
@@ -196,6 +199,7 @@ async function updateButtons() {
 
   if (playbackErr) handleError(playbackErr)
   updatePlaybackStatus(state, speech)
+  updatePlaybackRate(state, speech)
 
   $("body").toggleClass("is-stopped", state == "STOPPED");
   $("#imgLoading").toggle(state == "LOADING");
@@ -214,6 +218,52 @@ async function updateButtons() {
     $("body").removeClass("has-highlight")
     $("#highlight").hide()
   }
+}
+
+function updatePlaybackRate(state, speech) {
+  document.getElementById("playback-rate-control").hidden = speech?.canChangeRate !== true || !["PLAYING", "PAUSED", "LOADING"].includes(state)
+  const input = document.getElementById("playback-rate")
+  // Only a failed, unchanged edit may bypass the normal focused-edit protection.
+  const reconcile = playbackRateReconciliation
+    && input.value === playbackRateReconciliation.inputValue
+  if (!input.disabled) {
+    playbackRateReconciliation = null
+    if (reconcile || document.activeElement !== input) {
+      input.value = speech?.rate || defaults.rate
+    }
+  }
+}
+
+let playbackRateReconciliation
+
+async function reconcilePlaybackRate() {
+  const input = document.getElementById("playback-rate")
+  const pending = playbackRateReconciliation = {inputValue: input.value}
+  try {
+    const {state, speechInfo} = await bgPageInvoke("getPlaybackState")
+    // A poll or a newer edit/request supersedes this read, including capability changes.
+    if (playbackRateReconciliation === pending) updatePlaybackRate(state, speechInfo)
+  } catch (err) {
+    handleError(err)
+  }
+}
+
+async function onPlaybackRateChange() {
+  const input = document.getElementById("playback-rate")
+  if (document.getElementById("playback-rate-control").hidden || input.disabled) return
+  playbackRateReconciliation = null
+  const rate = Number(input.value)
+  if (!Number.isFinite(rate) || rate < 0.1 || rate > 10) return
+  input.disabled = true
+  let applied = false
+  try {
+    applied = await bgPageInvoke("setRate", [rate])
+  } catch (err) {
+    handleError(err)
+  } finally {
+    input.disabled = false
+  }
+  if (applied === false) await reconcilePlaybackRate()
 }
 
 function updateHighlighting(speech) {

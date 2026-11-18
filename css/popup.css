@@ -54,6 +54,29 @@ body.is-stopped #buttons {
   vertical-align: text-bottom;
 }
 
+#playback-rate-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+#playback-rate-control[hidden] { display: none; }
+#playback-rate {
+  box-sizing: border-box;
+  width: 64px;
+  padding: 4px;
+  border: 1px solid #999;
+  border-radius: 4px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+}
+#playback-rate:focus-visible { outline: 2px solid #4885ed; outline-offset: 2px; }
+.dark-mode #playback-rate { color-scheme: dark; }
+
 body.is-popup #highlight {
   width: 350px;
   height: 300px;
