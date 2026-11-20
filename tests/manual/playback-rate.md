@@ -5,8 +5,10 @@ Automated coverage: `npm test` (including `tests/playback-rate.test.js`).
 ## Real-voice smoke test
 
 Load the unpacked extension from this checkout in a disposable browser profile.
-Use a multi-paragraph article with more than one speech section and a voice
-whose synthesized audio is played by the extension (for example Piper).
+Select a specific voice whose synthesized audio is played by the extension (for
+example Piper), rather than automatic voice selection, and use a multi-paragraph
+article. Step 6 also requires a source with multiple sections, such as Google
+Slides with automatic slide advancement enabled.
 
 1. Start reading. The **Speed** number field should appear at the bottom of the
    player, below the reading pane, without a preset dropdown. It must remain
@@ -19,15 +21,16 @@ whose synthesized audio is played by the extension (for example Piper).
    it should use the new rate at the same position.
 5. Stop and restart; reopen the popup; check the same voice's speed in Settings.
    The new value should persist. Select another voice and confirm its speed
-   preference remains independent.
-6. Change speed as the article advances to the next section. Confirm the current
-   section receives the update, not only the completed section.
+   preference remains independent, then reselect the original voice.
+6. Using a multi-section source, change speed as playback advances to the next
+   section. Confirm the current section receives the update, not only the
+   completed section.
 7. Try the compact toolbar popup and pop-out player in light and dark mode.
    Confirm the localized label is visible, the input is keyboard-accessible,
    and the toolbar has no horizontal clipping.
 8. Try invalid/empty input and out-of-range values. They must not reach the
-   speech engine. Valid values are between 0.1 and 10; individual voices can
-   impose narrower effective speed limits.
+   speech engine. The field accepts values from 0.1 to 10, but the effective
+   range may be narrower depending on the voice, browser, or audio player.
 
 ## Reader-mode floating speed presets
 
@@ -51,19 +54,31 @@ whose synthesized audio is played by the extension (for example Piper).
 
 ## Voices without live-speed support
 
-1. Select a browser-native voice and start reading. Confirm both the popup speed
-   field and reader-mode speed button are hidden, not merely disabled.
-2. Repeat with a Google built-in/network voice where available. Its live speed
-   control must also be hidden even though the voice is cloud-backed.
+These checks concern changing speed during an active speech session, not whether
+speed can be configured at all. Support depends on the selected playback engine,
+not whether a voice is local or cloud-backed. Browser TTS voices are treated as
+unsupported for live changes by this extension; this does not mean that every
+underlying voice is inherently incapable of changing speed.
+
+1. Select a voice provided by the browser/operating system (not Piper,
+   Supertonic, or PocketTTS) and start reading. Confirm both the popup speed field
+   and reader-mode speed button are hidden, not merely disabled.
+2. Where available, repeat with a Chrome built-in Google network voice such as
+   `Google US English`. Its live controls must also be hidden. Do not confuse it
+   with `GoogleTranslate` or Google Cloud voices, which use different engines;
+   those generally support live changes, except `GoogleTranslate Hebrew` and
+   `GoogleTranslate Telugu`, which fall back to browser TTS.
 3. Verify hiding in playing, paused, and loading states, in both full and minimized
-   reader mode. If presets were open when the voice changed, they must close.
-4. Switch back to an audio-backed voice with live-speed support. The controls
-   should return and show that voice's current rate.
+   reader mode. If the active speech changes to an unsupported voice while presets
+   are open, they must close. Changing the Settings selection alone need not
+   replace the current speech immediately.
+4. Switch back to a voice with live-speed support, such as Piper, and start a new
+   session. The controls should return and show its current rate.
 5. A stale rate request reaching an unsupported voice must not restart it,
-   change its rate, or overwrite its saved per-voice preference.
-6. Verify the normal Settings page still lets users configure a native voice's
-   speed before starting playback. Unknown/pending voice capabilities should
-   keep live controls hidden until support is confirmed.
+   change its rate, or overwrite its saved speed preference.
+6. Verify that Settings still lets users configure a browser voice's speed, and
+   that a new playback session uses it, subject to the voice's limits. While the
+   active voice's capability is unknown or pending, live controls stay hidden.
 
 ## Deterministic browser integration scope
 
