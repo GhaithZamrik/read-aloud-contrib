@@ -99,8 +99,8 @@ var readAloudReader = readAloudReader || immediate(() => {
           ${button("stop", "reader_stop")}
           ${button("forward", "reader_forward")}
           <span class="ra-status" hidden><span class="ra-voice"></span><span class="ra-progress"></span></span>
-          <button type="button" class="ra-speed-button" data-action="speed" aria-controls="ra-speed-menu" aria-expanded="false" aria-label="${escapeHtml(message("options_rate_label"))}" hidden disabled>1×</button>
           <span class="ra-sep"></span>
+          <button type="button" class="ra-speed-button" data-action="speed" aria-controls="ra-speed-menu" aria-expanded="false" aria-label="${escapeHtml(message("options_rate_label"))}" hidden disabled>1×</button>
           <button type="button" class="ra-text-button" data-action="display" title="${escapeHtml(message("reader_display_settings"))}" aria-label="${escapeHtml(message("reader_display_settings"))}">Aa</button>
           ${button("settings", "reader_settings")}
           ${button("expand", "reader_expand")}
@@ -456,7 +456,7 @@ var readAloudReader = readAloudReader || immediate(() => {
   }
 
   function formatRate(rate) {
-    return new Intl.NumberFormat(brapi.i18n.getUILanguage(), {maximumFractionDigits: 3}).format(rate) + "×"
+    return new Intl.NumberFormat(brapi.i18n.getUILanguage(), {maximumFractionDigits: 2}).format(rate) + "×"
   }
 
   function buildSpeedMenu() {

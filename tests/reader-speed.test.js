@@ -55,6 +55,7 @@ function fixture() {
 test('speed presets have a compact grid and a wider floating rate button', () => {
   const css = fs.readFileSync('js/reader-css.js', 'utf8')
   assert.match(css, /\.ra-bar button\.ra-speed-button\s*\{[^}]*width:\s*52px/)
+  assert.match(source, /<span class="ra-sep"><\/span>\s*<button type="button" class="ra-speed-button"/)
   assert.match(css, /\.ra-speed-options\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/)
   assert.match(css, /@media \(max-width: 400px\)/)
 })

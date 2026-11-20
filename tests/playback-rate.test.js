@@ -7,6 +7,8 @@ const source = name => fs.readFileSync(`js/${name}.js`, 'utf8')
 function popupFixture() {
   const input = {value: '', disabled: false}
   const control = {hidden: true}
+  const decrease = {disabled: false}, increase = {disabled: false}
+  const elements = {'playback-rate': input, 'decrease-playback-rate': decrease, 'increase-playback-rate': increase}
   for (const element of [input]) {
     const listeners = {}
     element.addEventListener = (type, listener) => listeners[type] = listener
@@ -14,7 +16,7 @@ function popupFixture() {
   }
   const calls = [], errors = []
   const context = vm.createContext({
-    document: {getElementById: id => id === 'playback-rate' ? input : control, activeElement: null},
+    document: {getElementById: id => elements[id] || control, activeElement: null},
     defaults: {rate: 1},
     bgPageInvoke: async (...args) => calls.push(args),
     handleError: err => errors.push(err),
@@ -25,7 +27,7 @@ function popupFixture() {
     vm.runInContext(line, context)
   }
   input.focus = () => context.document.activeElement = input
-  return {context, input, control, calls, errors}
+  return {context, input, control, decrease, increase, calls, errors}
 }
 
 function speechFixture({native = false, google = false, kind, texts = ['First sentence. Second sentence.']} = {}) {
@@ -243,13 +245,12 @@ test('default popup keeps only the numeric speed field, leaving reader presets i
   assert.match(source('reader'), /const SPEED_PRESETS = /)
 })
 
-test('popup exposes a labeled speed field at the bottom, outside the collapsible toolbar', () => {
+test('popup exposes a labeled speed field inside the collapsible reading-controls toolbar', () => {
   const html = fs.readFileSync('popup.html', 'utf8')
   const topButtons = html.slice(html.indexOf('<div id="buttons">'), html.indexOf('<div id="highlight">'))
-  const bottomControls = html.slice(html.indexOf('<div id="reading-controls"'), html.indexOf('<div id="footer">'))
+  const toolbar = html.slice(html.indexOf('<div id="toolbar" hidden>'), html.indexOf('<div id="footer">'))
   assert.equal(topButtons.includes('id="playback-rate-control"'), false)
-  assert.ok(bottomControls.includes('id="playback-rate-control"'))
-  assert.match(bottomControls, /<\/div>\s*<span id="playback-rate-control"/)
+  assert.match(toolbar, /<span id="playback-rate-control"[\s\S]*<\/span>\s*<\/div>\s*<\/div>\s*$/)
   assert.match(html, /<label[^>]*for="playback-rate"/)
   assert.match(html, /<input[^>]*id="playback-rate"[^>]*type="number"[^>]*min="0.1"[^>]*max="10"/)
   assert.match(source('popup'), /getElementById\("playback-rate"\)\.addEventListener\("change", onPlaybackRateChange\)/)
@@ -418,6 +419,46 @@ test('popup hides speed controls for unsupported or unknown capabilities and ign
       assert.equal(f.calls.length, 0)
     }
   }
+})
+
+test('popup stepper snaps to the nearest preset in each direction and sends it', async () => {
+  const f = popupFixture()
+  f.context.updatePlaybackRate('PLAYING', {rate: 1.33, canChangeRate: true})
+  await f.context.stepPlaybackRate(+1)
+  assert.equal(f.input.value, 1.5)
+  f.input.value = '1.33'
+  await f.context.stepPlaybackRate(-1)
+  assert.equal(f.input.value, 1.25)
+  await f.context.stepPlaybackRate(-1)
+  assert.deepEqual(JSON.parse(JSON.stringify(f.calls)), [['setRate', [1.5]], ['setRate', [1.25]], ['setRate', [1]]])
+})
+
+test('popup stepper disables buttons at the preset bounds and while a change is pending', async () => {
+  const f = popupFixture()
+  f.context.updatePlaybackRate('PLAYING', {rate: 0.5, canChangeRate: true})
+  assert.equal(f.decrease.disabled, true)
+  assert.equal(f.increase.disabled, false)
+  await f.context.stepPlaybackRate(-1)
+  assert.equal(f.calls.length, 0)
+  f.context.updatePlaybackRate('PLAYING', {rate: 3, canChangeRate: true})
+  assert.equal(f.decrease.disabled, false)
+  assert.equal(f.increase.disabled, true)
+  let resolve
+  f.context.bgPageInvoke = () => new Promise(r => resolve = r)
+  const pending = f.context.stepPlaybackRate(-1)
+  assert.equal(f.decrease.disabled, true)
+  assert.equal(f.increase.disabled, true)
+  resolve(true)
+  await pending
+  assert.equal(f.input.value, 2.5)
+  assert.equal(f.decrease.disabled, false)
+  assert.equal(f.increase.disabled, false)
+})
+
+test('popup speed display rounds to two decimals', () => {
+  const f = popupFixture()
+  f.context.updatePlaybackRate('PLAYING', {rate: 1.3333, canChangeRate: true})
+  assert.equal(f.input.value, 1.33)
 })
 
 test('inline speed reflects playback, stays visible when paused, and leaves edits alone', () => {
